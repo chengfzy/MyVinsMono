@@ -1,16 +1,14 @@
 #ifndef TRANSFORM_H
 #define TRANSFORM_H
 
+#include <stdint.h>
 #include <boost/shared_ptr.hpp>
 #include <eigen3/Eigen/Dense>
-#include <stdint.h>
 
-namespace camodocal
-{
+namespace camodocal {
 
-class Transform
-{
-public:
+class Transform {
+  public:
     EIGEN_MAKE_ALIGNED_OPERATOR_NEW
 
     Transform();
@@ -28,11 +26,11 @@ public:
 
     Eigen::Matrix4d toMatrix(void) const;
 
-private:
+  private:
     Eigen::Quaterniond m_q;
     Eigen::Vector3d m_t;
 };
 
-}
+}  // namespace camodocal
 
 #endif
