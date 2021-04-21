@@ -25,6 +25,7 @@ void reduceVector(vector<int>& v, vector<uchar> status) {
 
 FeatureTracker::FeatureTracker() {}
 
+// 按被追踪的次数排序, 并按被追踪点的位置设置mask
 void FeatureTracker::setMask() {
     if (FISHEYE)
         mask = fisheye_mask.clone();
@@ -59,8 +60,8 @@ void FeatureTracker::setMask() {
 void FeatureTracker::addPoints() {
     for (auto& p : n_pts) {
         forw_pts.push_back(p);
-        ids.push_back(-1);
-        track_cnt.push_back(1);
+        ids.push_back(-1);       // id设为-1
+        track_cnt.push_back(1);  // 跟踪次数为1, 第一次被跟踪
     }
 }
 
@@ -91,6 +92,7 @@ void FeatureTracker::readImage(const cv::Mat& _img, double _cur_time) {
         vector<float> err;
         cv::calcOpticalFlowPyrLK(cur_img, forw_img, cur_pts, forw_pts, status, err, cv::Size(21, 21), 3);
 
+        // 清理跟丢的点
         for (int i = 0; i < int(forw_pts.size()); i++)
             if (status[i] && !inBorder(forw_pts[i])) status[i] = 0;
         reduceVector(prev_pts, status);
@@ -102,7 +104,10 @@ void FeatureTracker::readImage(const cv::Mat& _img, double _cur_time) {
         ROS_DEBUG("temporal optical flow costs: %fms", t_o.toc());
     }
 
-    for (auto& n : track_cnt) n++;
+    // 跟踪成功一次, 跟踪次数+1, 数值越大表明被跟踪的越久
+    for (auto& n : track_cnt) {
+        n++;
+    }
 
     if (PUB_THIS_FRAME) {
         rejectWithF();
@@ -118,6 +123,7 @@ void FeatureTracker::readImage(const cv::Mat& _img, double _cur_time) {
             if (mask.empty()) cout << "mask is empty " << endl;
             if (mask.type() != CV_8UC1) cout << "mask type wrong " << endl;
             if (mask.size() != forw_img.size()) cout << "wrong size " << endl;
+            // 添加额外的点, 从而保证每个帧都有足够的点
             cv::goodFeaturesToTrack(forw_img, n_pts, MAX_CNT - forw_pts.size(), 0.01, MIN_DIST, mask);
         } else
             n_pts.clear();
@@ -137,6 +143,7 @@ void FeatureTracker::readImage(const cv::Mat& _img, double _cur_time) {
     prev_time = cur_time;
 }
 
+// 通过F矩阵去除outliers
 void FeatureTracker::rejectWithF() {
     if (forw_pts.size() >= 8) {
         ROS_DEBUG("FM ransac begins");
@@ -169,9 +176,12 @@ void FeatureTracker::rejectWithF() {
     }
 }
 
+// 更新ID号
 bool FeatureTracker::updateID(unsigned int i) {
     if (i < ids.size()) {
-        if (ids[i] == -1) ids[i] = n_id++;
+        if (ids[i] == -1) {
+            ids[i] = n_id++;
+        }
         return true;
     } else
         return false;

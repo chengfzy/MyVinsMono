@@ -88,11 +88,17 @@ void img_callback(const sensor_msgs::ImageConstPtr& img_msg) {
 #endif
     }
 
+    // 更新特征点的ID号
     for (unsigned int i = 0;; i++) {
         bool completed = false;
-        for (int j = 0; j < NUM_OF_CAM; j++)
-            if (j != 1 || !STEREO_TRACK) completed |= trackerData[j].updateID(i);
-        if (!completed) break;
+        for (int j = 0; j < NUM_OF_CAM; j++) {
+            if (j != 1 || !STEREO_TRACK) {
+                completed |= trackerData[j].updateID(i);
+            }
+        }
+        if (!completed) {
+            break;
+        }
     }
 
     if (PUB_THIS_FRAME) {
@@ -184,11 +190,12 @@ void img_callback(const sensor_msgs::ImageConstPtr& img_msg) {
 int main(int argc, char** argv) {
     ros::init(argc, argv, "feature_tracker");
     ros::NodeHandle n("~");
-    ros::console::set_logger_level(ROSCONSOLE_DEFAULT_NAME, ros::console::levels::Info);
+    ros::console::set_logger_level(ROSCONSOLE_DEFAULT_NAME, ros::console::levels::Debug);
     readParameters(n);
 
     for (int i = 0; i < NUM_OF_CAM; i++) trackerData[i].readIntrinsicParameter(CAM_NAMES[i]);
 
+    // 鱼眼相机的mask
     if (FISHEYE) {
         for (int i = 0; i < NUM_OF_CAM; i++) {
             trackerData[i].fisheye_mask = cv::imread(FISHEYE_MASK, 0);
