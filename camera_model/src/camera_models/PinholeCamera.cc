@@ -381,7 +381,7 @@ void PinholeCamera::liftProjective(const Eigen::Vector2d& p, Eigen::Vector3d& P)
 void PinholeCamera::spaceToPlane(const Eigen::Vector3d& P, Eigen::Vector2d& p) const {
     Eigen::Vector2d p_u, p_d;
 
-    // Project points to the normalised plane
+    // Project points to the normalized plane
     p_u << P(0) / P(2), P(1) / P(2);
 
     if (m_noDistortion) {
@@ -413,7 +413,7 @@ PinholeCamera::spaceToPlane(const Eigen::Vector3d& P, Eigen::Vector2d& p,
     double dxdmx, dydmx, dxdmy, dydmy;
 
     norm = P.norm();
-    // Project points to the normalised plane
+    // Project points to the normalized plane
     inv_denom = 1.0 / P(2);
     p_u << inv_denom * P(0), inv_denom * P(1);
 
@@ -487,9 +487,9 @@ void PinholeCamera::undistToPlane(const Eigen::Vector2d& p_u, Eigen::Vector2d& p
 }
 
 /**
- * \brief Apply distortion to input point (from the normalised plane)
+ * \brief Apply distortion to input point (from the normalized plane)
  *
- * \param p_u undistorted coordinates of point on the normalised plane
+ * \param p_u undistorted coordinates of point on the normalized plane
  * \return to obtain the distorted point: p_d = p_u + d_u
  */
 void PinholeCamera::distortion(const Eigen::Vector2d& p_u, Eigen::Vector2d& d_u) const {
@@ -510,10 +510,10 @@ void PinholeCamera::distortion(const Eigen::Vector2d& p_u, Eigen::Vector2d& d_u)
 }
 
 /**
- * \brief Apply distortion to input point (from the normalised plane)
+ * \brief Apply distortion to input point (from the normalized plane)
  *        and calculate Jacobian
  *
- * \param p_u undistorted coordinates of point on the normalised plane
+ * \param p_u undistorted coordinates of point on the normalized plane
  * \return to obtain the distorted point: p_d = p_u + d_u
  */
 void PinholeCamera::distortion(const Eigen::Vector2d& p_u, Eigen::Vector2d& d_u, Eigen::Matrix2d& J) const {

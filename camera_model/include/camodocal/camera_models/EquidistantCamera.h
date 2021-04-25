@@ -12,8 +12,9 @@ namespace camodocal {
 /**
  * J. Kannala, and S. Brandt, A Generic Camera Model and Calibration Method
  * for Conventional, Wide-Angle, and Fish-Eye Lenses, PAMI 2006
+ *
+ * 鱼眼模型, 与OpenCV的鱼眼模型, kalibr中的Equidistant Camera Model一样. 参见我的笔记
  */
-
 class EquidistantCamera : public Camera {
   public:
     class Parameters : public Camera::Parameters {

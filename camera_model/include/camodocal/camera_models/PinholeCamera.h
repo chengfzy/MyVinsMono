@@ -70,27 +70,40 @@ class PinholeCamera : public Camera {
     int imageWidth(void) const;
     int imageHeight(void) const;
 
+    /**
+     * @brief Zhang Zhengyou的内参估计方式, 注意这里只是初值, 并没有最后的refine BA.
+     *
+     * @param boardSize
+     * @param objectPoints
+     * @param imagePoints
+     * @return
+     */
     void estimateIntrinsics(const cv::Size& boardSize, const std::vector<std::vector<cv::Point3f> >& objectPoints,
                             const std::vector<std::vector<cv::Point2f> >& imagePoints);
 
     // Lift points from the image plane to the sphere
+    // 将点从imageFrame转到单位球坐标下的worldFrame
     virtual void liftSphere(const Eigen::Vector2d& p, Eigen::Vector3d& P) const;
     //%output P
 
     // Lift points from the image plane to the projective space
+    // 将点从imageFrame转到规一化的worldFrame(z轴值为1)
     void liftProjective(const Eigen::Vector2d& p, Eigen::Vector3d& P) const;
     //%output P
 
     // Projects 3D points to the image plane (Pi function)
+    // 将worldFrame下的3D点转换到图像平面
     void spaceToPlane(const Eigen::Vector3d& P, Eigen::Vector2d& p) const;
     //%output p
 
     // Projects 3D points to the image plane (Pi function)
     // and calculates jacobian
+    // 将worldFrame下的3D点转换到图像平面, 并求解Jacobian, 注意此函数未实现
     void spaceToPlane(const Eigen::Vector3d& P, Eigen::Vector2d& p, Eigen::Matrix<double, 2, 3>& J) const;
     //%output p
     //%output J
 
+    // 将去畸后的点转换到图像平面, 即添加畸变和内参
     void undistToPlane(const Eigen::Vector2d& p_u, Eigen::Vector2d& p) const;
     //%output p
 
