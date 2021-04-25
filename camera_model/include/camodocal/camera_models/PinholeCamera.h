@@ -121,6 +121,7 @@ class PinholeCamera : public Camera {
   private:
     Parameters mParameters;
 
+    // the inverse of matrix K
     double m_inv_K11, m_inv_K13, m_inv_K22, m_inv_K23;
     bool m_noDistortion;
 };
