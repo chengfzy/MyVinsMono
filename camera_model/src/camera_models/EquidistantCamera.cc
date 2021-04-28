@@ -286,6 +286,8 @@ void EquidistantCamera::liftSphere(const Eigen::Vector2d& p, Eigen::Vector3d& P)
 /**
  * \brief Lifts a point from the image plane to its projective ray
  *
+ * 将点从imageFrame转到规一化的worldFrame(去畸, z轴值为1)
+ *
  * \param p image coordinates
  * \param P coordinates of the projective ray
  */
@@ -522,6 +524,14 @@ void EquidistantCamera::fitOddPoly(const std::vector<double>& x, const std::vect
     }
 }
 
+/**
+ * @brief 不是很明白啥意思. 感觉是将当前的畸变进行多项式拟合, 并求出球坐标下的两个角度值
+ *
+ * @param p_u
+ * @param theta
+ * @param phi
+ * @return
+ */
 void EquidistantCamera::backprojectSymmetric(const Eigen::Vector2d& p_u, double& theta, double& phi) const {
     double tol = 1e-10;
     double p_u_norm = p_u.norm();

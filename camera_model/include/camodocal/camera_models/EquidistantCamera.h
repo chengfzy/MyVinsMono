@@ -81,10 +81,12 @@ class EquidistantCamera : public Camera {
                             const std::vector<std::vector<cv::Point2f> >& imagePoints);
 
     // Lift points from the image plane to the sphere
+    // 将点从imageFrame转到单位球坐标下的worldFrame, 即单位长为1
     virtual void liftSphere(const Eigen::Vector2d& p, Eigen::Vector3d& P) const;
     //%output P
 
     // Lift points from the image plane to the projective space
+    // 将点从imageFrame转到规一化的worldFrame(去畸, z轴值为1)
     void liftProjective(const Eigen::Vector2d& p, Eigen::Vector3d& P) const;
     //%output P
 

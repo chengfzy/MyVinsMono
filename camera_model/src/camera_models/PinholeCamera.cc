@@ -309,11 +309,13 @@ void PinholeCamera::estimateIntrinsics(const cv::Size& boardSize,
 void PinholeCamera::liftSphere(const Eigen::Vector2d& p, Eigen::Vector3d& P) const {
     liftProjective(p, P);
 
+    // 规一化到球坐标
     P.normalize();
 }
 
 /**
- * \brief Lifts a point from the image plane to its projective ray
+ * \brief Lifts a point from the image plane to its projective ray.
+ * 将点从imageFrame转到规一化的worldFrame(去畸, z轴值为1)
  *
  * \param p image coordinates
  * \param P coordinates of the projective ray
