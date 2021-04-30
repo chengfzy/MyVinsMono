@@ -101,6 +101,9 @@ void img_callback(const sensor_msgs::ImageConstPtr& img_msg) {
         }
     }
 
+    // 1. 将特征点ID, 去畸后的归一化坐标3D点(x, y, z=1), 原图像2D点(u ,v), 像素的速度(vx, vy)
+    // 封装成sensor_msgs::PointCloudPtr, 发布到pub_img
+    // 2. 将图像封装成cv_bridge::CvImagePtr, 发布到pub_match
     if (PUB_THIS_FRAME) {
         pub_count++;
         sensor_msgs::PointCloudPtr feature_points(new sensor_msgs::PointCloud);
@@ -128,12 +131,12 @@ void img_callback(const sensor_msgs::ImageConstPtr& img_msg) {
                     p.y = un_pts[j].y;
                     p.z = 1;
 
-                    feature_points->points.push_back(p);
-                    id_of_point.values.push_back(p_id * NUM_OF_CAM + i);
-                    u_of_point.values.push_back(cur_pts[j].x);
-                    v_of_point.values.push_back(cur_pts[j].y);
-                    velocity_x_of_point.values.push_back(pts_velocity[j].x);
-                    velocity_y_of_point.values.push_back(pts_velocity[j].y);
+                    feature_points->points.push_back(p);                      // 去畸后在归一化坐标下的3D点
+                    id_of_point.values.push_back(p_id * NUM_OF_CAM + i);      // 特征点ID
+                    u_of_point.values.push_back(cur_pts[j].x);                // 原2D图像的u值
+                    v_of_point.values.push_back(cur_pts[j].y);                // 原2D图像的v值
+                    velocity_x_of_point.values.push_back(pts_velocity[j].x);  // 像素的x方向速度, vx
+                    velocity_y_of_point.values.push_back(pts_velocity[j].y);  // 像素的y方向速度, vy
                 }
             }
         }

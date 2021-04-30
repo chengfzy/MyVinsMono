@@ -21,11 +21,11 @@
 #include "pose_graph.h"
 #include "utility/CameraPoseVisualization.h"
 #include "utility/tic_toc.h"
-#define SKIP_FIRST_CNT 10
+#define SKIP_FIRST_CNT 10  // 跳动前几帧才进行回环
 using namespace std;
 
-queue<sensor_msgs::ImageConstPtr> image_buf;
-queue<sensor_msgs::PointCloudConstPtr> point_buf;
+queue<sensor_msgs::ImageConstPtr> image_buf;       // 原始图像数据
+queue<sensor_msgs::PointCloudConstPtr> point_buf;  // 世界坐标系下的地图点云
 queue<nav_msgs::Odometry::ConstPtr> pose_buf;
 queue<Eigen::Vector3d> odometry_buf;
 std::mutex m_buf;
@@ -33,9 +33,9 @@ std::mutex m_process;
 int frame_index = 0;
 int sequence = 1;
 PoseGraph posegraph;
-int skip_first_cnt = 0;
-int SKIP_CNT;
-int skip_cnt = 0;
+int skip_first_cnt = 0;  // 跳过前几帧的计数, 与SKIP_FIRST_CNT配合
+int SKIP_CNT;            // 隔几帧才触发回环检测
+int skip_cnt = 0;        // 隔几帧的计数, 与SKIP_CNT配合
 bool load_flag = 0;
 bool start_flag = 0;
 double SKIP_DIS = 0;
@@ -46,7 +46,7 @@ int ROW;
 int COL;
 int DEBUG_IMAGE;
 int VISUALIZE_IMU_FORWARD;
-int LOOP_CLOSURE;
+int LOOP_CLOSURE;  // 是否启动回环
 int FAST_RELOCALIZATION;
 
 camodocal::CameraPtr m_camera;
@@ -148,9 +148,10 @@ void imu_forward_callback(const nav_msgs::Odometry::ConstPtr& forward_msg) {
         vio_q.y() = forward_msg->pose.pose.orientation.y;
         vio_q.z() = forward_msg->pose.pose.orientation.z;
 
+        // 坐标系转换
         vio_t = posegraph.w_r_vio * vio_t + posegraph.w_t_vio;
         vio_q = posegraph.w_r_vio * vio_q;
-
+        // 加了飘移...
         vio_t = posegraph.r_drift * vio_t + posegraph.t_drift;
         vio_q = posegraph.r_drift * vio_q;
 
@@ -265,8 +266,15 @@ void extrinsic_callback(const nav_msgs::Odometry::ConstPtr& pose_msg) {
     m_process.unlock();
 }
 
+/**
+ * @brief 主要处理函数
+ */
 void process() {
-    if (!LOOP_CLOSURE) return;
+    // 没有开启回环, 直接退出
+    if (!LOOP_CLOSURE) {
+        return;
+    }
+
     while (true) {
         sensor_msgs::ImageConstPtr image_msg = NULL;
         sensor_msgs::PointCloudConstPtr point_msg = NULL;
@@ -285,12 +293,18 @@ void process() {
                        point_buf.back()->header.stamp.toSec() >= pose_buf.front()->header.stamp.toSec()) {
                 pose_msg = pose_buf.front();
                 pose_buf.pop();
-                while (!pose_buf.empty()) pose_buf.pop();
-                while (image_buf.front()->header.stamp.toSec() < pose_msg->header.stamp.toSec()) image_buf.pop();
+                while (!pose_buf.empty()) {
+                    pose_buf.pop();
+                }
+                while (image_buf.front()->header.stamp.toSec() < pose_msg->header.stamp.toSec()) {
+                    image_buf.pop();
+                }
                 image_msg = image_buf.front();
                 image_buf.pop();
 
-                while (point_buf.front()->header.stamp.toSec() < pose_msg->header.stamp.toSec()) point_buf.pop();
+                while (point_buf.front()->header.stamp.toSec() < pose_msg->header.stamp.toSec()) {
+                    point_buf.pop();
+                }
                 point_msg = point_buf.front();
                 point_buf.pop();
             }
@@ -301,12 +315,13 @@ void process() {
             // printf(" pose time %f \n", pose_msg->header.stamp.toSec());
             // printf(" point time %f \n", point_msg->header.stamp.toSec());
             // printf(" image time %f \n", image_msg->header.stamp.toSec());
-            // skip fisrt few
+            // skip fisrt few, 跳过前几帧
             if (skip_first_cnt < SKIP_FIRST_CNT) {
                 skip_first_cnt++;
                 continue;
             }
 
+            // 每隔几帧才开始进行一次重定位
             if (skip_cnt < SKIP_CNT) {
                 skip_cnt++;
                 continue;
@@ -314,6 +329,7 @@ void process() {
                 skip_cnt = 0;
             }
 
+            // 对图像转换成灰度图
             cv_bridge::CvImageConstPtr ptr;
             if (image_msg->encoding == "8UC1") {
                 sensor_msgs::Image img;
@@ -325,16 +341,18 @@ void process() {
                 img.data = image_msg->data;
                 img.encoding = "mono8";
                 ptr = cv_bridge::toCvCopy(img, sensor_msgs::image_encodings::MONO8);
-            } else
+            } else {
                 ptr = cv_bridge::toCvCopy(image_msg, sensor_msgs::image_encodings::MONO8);
-
+            }
             cv::Mat image = ptr->image;
+
             // build keyframe
             Vector3d T = Vector3d(pose_msg->pose.pose.position.x, pose_msg->pose.pose.position.y,
                                   pose_msg->pose.pose.position.z);
             Matrix3d R = Quaterniond(pose_msg->pose.pose.orientation.w, pose_msg->pose.pose.orientation.x,
                                      pose_msg->pose.pose.orientation.y, pose_msg->pose.pose.orientation.z)
                              .toRotationMatrix();
+            // 大于一定距离才创建关键帧
             if ((T - last_t).norm() > SKIP_DIS) {
                 vector<cv::Point3f> point_3d;
                 vector<cv::Point2f> point_2d_uv;
@@ -366,6 +384,8 @@ void process() {
                                                   point_2d_uv, point_2d_normal, point_id, sequence);
                 m_process.lock();
                 start_flag = 1;
+
+                // 在PoseGraph中添加关键帧
                 posegraph.addKeyFrame(keyframe, 1);
                 m_process.unlock();
                 frame_index++;
@@ -417,13 +437,13 @@ int main(int argc, char** argv) {
     }
 
     double camera_visual_size = fsSettings["visualize_camera_size"];
-    cameraposevisual.setScale(camera_visual_size);
+    cameraposevisual.setScale(camera_visual_size);  // RVIZ中相机marker大小
     cameraposevisual.setLineWidth(camera_visual_size / 10.0);
 
     LOOP_CLOSURE = fsSettings["loop_closure"];
     std::string IMAGE_TOPIC;
     int LOAD_PREVIOUS_POSE_GRAPH;
-    if (LOOP_CLOSURE) {
+    if (LOOP_CLOSURE) {  // 监测回环
         ROW = fsSettings["image_height"];
         COL = fsSettings["image_width"];
         std::string pkg_path = ros::package::getPath("pose_graph");
@@ -444,9 +464,9 @@ int main(int argc, char** argv) {
         FileSystemHelper::createDirectoryIfNotExists(POSE_GRAPH_SAVE_PATH.c_str());
         FileSystemHelper::createDirectoryIfNotExists(VINS_RESULT_PATH.c_str());
 
-        VISUALIZE_IMU_FORWARD = fsSettings["visualize_imu_forward"];
-        LOAD_PREVIOUS_POSE_GRAPH = fsSettings["load_previous_pose_graph"];
-        FAST_RELOCALIZATION = fsSettings["fast_relocalization"];
+        VISUALIZE_IMU_FORWARD = fsSettings["visualize_imu_forward"];  // 使用IMU递推来获得更高频率的位置输出
+        LOAD_PREVIOUS_POSE_GRAPH = fsSettings["load_previous_pose_graph"];  // 加载之前的地图
+        FAST_RELOCALIZATION = fsSettings["fast_relocalization"];            // 快速重定位
         VINS_RESULT_PATH = VINS_RESULT_PATH + "/vins_result_loop.csv";
         std::ofstream fout(VINS_RESULT_PATH, std::ios::out);
         fout.close();

@@ -10,6 +10,11 @@
 using namespace Eigen;
 using namespace std;
 
+/**
+ * @brief 图像帧
+ *
+ * @return
+ */
 class ImageFrame {
   public:
     ImageFrame(){};
@@ -17,12 +22,14 @@ class ImageFrame {
         : t{_t}, is_key_frame{false} {
         points = _points;
     };
+
+    // 该帧所有的特征点信息, <featureId, (cameraId, [x, y, z, u, v, vx, vy)>
     map<int, vector<pair<int, Eigen::Matrix<double, 7, 1>>>> points;
-    double t;
-    Matrix3d R;
-    Vector3d T;
-    IntegrationBase* pre_integration;
-    bool is_key_frame;
+    double t;                          // 时间戳
+    Matrix3d R;                        // R
+    Vector3d T;                        // T
+    IntegrationBase* pre_integration;  // 预积分
+    bool is_key_frame;                 // 是否是关键帧
 };
 
 bool VisualIMUAlignment(map<double, ImageFrame>& all_image_frame, Vector3d* Bgs, Vector3d& g, VectorXd& x);

@@ -9,6 +9,21 @@ static void reduceVector(vector<Derived>& v, vector<uchar> status) {
 }
 
 // create keyframe online
+
+/**
+ * @brief Constructor
+ *
+ * @param _time_stamp   时间戳
+ * @param _index        Frame index
+ * @param _vio_T_w_i    p_WB, 某一帧IMU在世界坐标系中的位置
+ * @param _vio_R_w_i    R_WB, 某一帧IMU在世界坐标系中的旋转
+ * @param _image        图像, 灰度图
+ * @param _point_3d     该帧对应的3D点
+ * @param _point_2d_uv  该帧对应的2D点
+ * @param _point_2d_norm    该帧对应的规一化2D点
+ * @param _point_id     2D点的ID号
+ * @param _sequence     地图序列?
+ */
 KeyFrame::KeyFrame(double _time_stamp, int _index, Vector3d& _vio_T_w_i, Matrix3d& _vio_R_w_i, cv::Mat& _image,
                    vector<cv::Point3f>& _point_3d, vector<cv::Point2f>& _point_2d_uv,
                    vector<cv::Point2f>& _point_2d_norm, vector<double>& _point_id, int _sequence) {
@@ -66,6 +81,8 @@ KeyFrame::KeyFrame(double _time_stamp, int _index, Vector3d& _vio_T_w_i, Matrix3
     brief_descriptors = _brief_descriptors;
 }
 
+// 计算窗口中所有特征的描述子. 个人理解这里就是该帧, 并不存在窗口中的概念, 或者说是滑窗中该帧的所有特征点,
+// 与新添加的点进行区分
 void KeyFrame::computeWindowBRIEFPoint() {
     BriefExtractor extractor(BRIEF_PATTERN_FILE.c_str());
     for (int i = 0; i < (int)point_2d_uv.size(); i++) {
@@ -76,11 +93,12 @@ void KeyFrame::computeWindowBRIEFPoint() {
     extractor(image, window_keypoints, window_brief_descriptors);
 }
 
+// 额外检测新的特征点并计算所有特征点的描述符
 void KeyFrame::computeBRIEFPoint() {
     BriefExtractor extractor(BRIEF_PATTERN_FILE.c_str());
     const int fast_th = 20;  // corner detector response threshold
     if (1)
-        cv::FAST(image, keypoints, fast_th, true);
+        cv::FAST(image, keypoints, fast_th, true);  // 使用FAST特征点
     else {
         vector<cv::Point2f> tmp_pts;
         cv::goodFeaturesToTrack(image, tmp_pts, 500, 0.01, 10);
@@ -90,7 +108,11 @@ void KeyFrame::computeBRIEFPoint() {
             keypoints.push_back(key);
         }
     }
+
+    //计算描述符
     extractor(image, keypoints, brief_descriptors);
+
+    // 将特征点进行去畸, 并规一化
     for (int i = 0; i < (int)keypoints.size(); i++) {
         Eigen::Vector3d tmp_p;
         m_camera->liftProjective(Eigen::Vector2d(keypoints[i].pt.x, keypoints[i].pt.y), tmp_p);
@@ -100,6 +122,7 @@ void KeyFrame::computeBRIEFPoint() {
     }
 }
 
+// 计算BRIEF描述符, 注意这里点不做计算, 只计算描述符, 代码不规范未加const
 void BriefExtractor::operator()(const cv::Mat& im, vector<cv::KeyPoint>& keys,
                                 vector<BRIEF::bitset>& descriptors) const {
     m_brief.compute(im, keys, descriptors);

@@ -62,6 +62,7 @@ class Estimator {
     Matrix3d ric[NUM_OF_CAM];
     Vector3d tic[NUM_OF_CAM];
 
+    // 滑窗中的状态量[p, v, R, ba, bg]
     Vector3d Ps[(WINDOW_SIZE + 1)];
     Vector3d Vs[(WINDOW_SIZE + 1)];
     Matrix3d Rs[(WINDOW_SIZE + 1)];
@@ -74,7 +75,7 @@ class Estimator {
     std_msgs::Header Headers[(WINDOW_SIZE + 1)];
 
     IntegrationBase* pre_integrations[(WINDOW_SIZE + 1)];
-    Vector3d acc_0, gyr_0;
+    Vector3d acc_0, gyr_0;  // 上一帧的IMU值
 
     vector<double> dt_buf[(WINDOW_SIZE + 1)];
     vector<Vector3d> linear_acceleration_buf[(WINDOW_SIZE + 1)];
@@ -87,7 +88,7 @@ class Estimator {
     MotionEstimator m_estimator;
     InitialEXRotation initial_ex_rotation;
 
-    bool first_imu;
+    bool first_imu;  // 是否接收到第一帧IMU数据
     bool is_valid, is_key;
     bool failure_occur;
 
@@ -96,28 +97,29 @@ class Estimator {
     vector<Vector3d> key_poses;
     double initial_timestamp;
 
-    double para_Pose[WINDOW_SIZE + 1][SIZE_POSE];
-    double para_SpeedBias[WINDOW_SIZE + 1][SIZE_SPEEDBIAS];
-    double para_Feature[NUM_OF_F][SIZE_FEATURE];
-    double para_Ex_Pose[NUM_OF_CAM][SIZE_POSE];
+    // ceres优化时的中间变量
+    double para_Pose[WINDOW_SIZE + 1][SIZE_POSE];            // [p, R]
+    double para_SpeedBias[WINDOW_SIZE + 1][SIZE_SPEEDBIAS];  // [v, ba, bg]
+    double para_Feature[NUM_OF_F][SIZE_FEATURE];             // 特征点的深度值
+    double para_Ex_Pose[NUM_OF_CAM][SIZE_POSE];              // 外参, R_BC
     double para_Retrive_Pose[SIZE_POSE];
-    double para_Td[1][1];
+    double para_Td[1][1];  // IMU-Camera之间的时延
     double para_Tr[1][1];
 
     int loop_window_index;
 
     MarginalizationInfo* last_marginalization_info;
-    vector<double*> last_marginalization_parameter_blocks;
+    vector<double*> last_marginalization_parameter_blocks;  // 本次边缘化需要保留的状态量的内存地址
 
     map<double, ImageFrame> all_image_frame;
     IntegrationBase* tmp_pre_integration;
 
     // relocalization variable
-    bool relocalization_info;
+    bool relocalization_info;  //是否包含重定位信息
     double relo_frame_stamp;
     double relo_frame_index;
     int relo_frame_local_index;
-    vector<Vector3d> match_points;
+    vector<Vector3d> match_points;  // [u, v, featureId]
     double relo_Pose[SIZE_POSE];
     Matrix3d drift_correct_r;
     Vector3d drift_correct_t;

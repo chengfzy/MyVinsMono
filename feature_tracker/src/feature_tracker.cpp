@@ -151,7 +151,9 @@ void FeatureTracker::rejectWithF() {
         vector<cv::Point2f> un_cur_pts(cur_pts.size()), un_forw_pts(forw_pts.size());
         for (unsigned int i = 0; i < cur_pts.size(); i++) {
             Eigen::Vector3d tmp_p;
+            // 对图像进行去畸, 并投影到规一化的球坐标
             m_camera->liftProjective(Eigen::Vector2d(cur_pts[i].x, cur_pts[i].y), tmp_p);
+            // 这里计算只是用来RANSAC, FOCAL_LENGTH, COL, ROW只是虚拟出来的相机, 没有其他作用
             tmp_p.x() = FOCAL_LENGTH * tmp_p.x() / tmp_p.z() + COL / 2.0;
             tmp_p.y() = FOCAL_LENGTH * tmp_p.y() / tmp_p.z() + ROW / 2.0;
             un_cur_pts[i] = cv::Point2f(tmp_p.x(), tmp_p.y());
@@ -192,6 +194,14 @@ void FeatureTracker::readIntrinsicParameter(const string& calib_file) {
     m_camera = CameraFactory::instance()->generateCameraFromYamlFile(calib_file);
 }
 
+/**
+ * @brief 对图像去畸, 并显示.
+ *
+ * 注意这里的图像并不是原图像, 而是虚拟的假的图像, 其大小与原始均不一样, 这里做了一个remap的过程
+ *
+ * @param name
+ * @return
+ */
 void FeatureTracker::showUndistortion(const string& name) {
     cv::Mat undistortedImg(ROW + 600, COL + 600, CV_8UC1, cv::Scalar(0));
     vector<Eigen::Vector2d> distortedp, undistortedp;

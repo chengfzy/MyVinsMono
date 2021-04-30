@@ -19,6 +19,9 @@ using namespace Eigen;
 using namespace std;
 using namespace DVision;
 
+/**
+ * @brief 计算BRIEF描述子
+ */
 class BriefExtractor {
   public:
     virtual void operator()(const cv::Mat& im, vector<cv::KeyPoint>& keys, vector<BRIEF::bitset>& descriptors) const;
@@ -78,11 +81,11 @@ class KeyFrame {
     vector<cv::Point2f> point_2d_uv;
     vector<cv::Point2f> point_2d_norm;
     vector<double> point_id;
-    vector<cv::KeyPoint> keypoints;
-    vector<cv::KeyPoint> keypoints_norm;
-    vector<cv::KeyPoint> window_keypoints;
-    vector<BRIEF::bitset> brief_descriptors;
-    vector<BRIEF::bitset> window_brief_descriptors;
+    vector<cv::KeyPoint> keypoints;                  // 额外提取的点的位置
+    vector<cv::KeyPoint> keypoints_norm;             // 额外提取的点的规一化坐标
+    vector<cv::KeyPoint> window_keypoints;           // 滑窗中该帧的特征点位置
+    vector<BRIEF::bitset> brief_descriptors;         // 额外提取点对应的描述符
+    vector<BRIEF::bitset> window_brief_descriptors;  // 滑窗中该帧每个特征点对应的描述符
     bool has_fast_point;
     int sequence;
 

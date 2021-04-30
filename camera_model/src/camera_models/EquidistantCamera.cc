@@ -286,7 +286,7 @@ void EquidistantCamera::liftSphere(const Eigen::Vector2d& p, Eigen::Vector3d& P)
 /**
  * \brief Lifts a point from the image plane to its projective ray
  *
- * 将点从imageFrame转到规一化的worldFrame(去畸, z轴值为1)
+ * 将点从imageFrame转到规一化的worldFrame(去畸, 模长为1). 注意与PinHole不一样的是这里的规一化不是指z轴为1, 而是模长为1
  *
  * \param p image coordinates
  * \param P coordinates of the projective ray

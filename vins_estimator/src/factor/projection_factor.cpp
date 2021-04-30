@@ -30,6 +30,7 @@ bool ProjectionFactor::Evaluate(double const* const* parameters, double* residua
 
     double inv_dep_i = parameters[3][0];
 
+    // 将2D点通过逆深度投影到FrameI(首次被观测的帧)得到3D点, 再投影到IMU, 再到FrameJ, 再转换到规一化相机平面
     Eigen::Vector3d pts_camera_i = pts_i / inv_dep_i;
     Eigen::Vector3d pts_imu_i = qic * pts_camera_i + tic;
     Eigen::Vector3d pts_w = Qi * pts_imu_i + Pi;

@@ -95,6 +95,9 @@ void MarginalizationInfo::addResidualBlockInfo(ResidualBlockInfo* residual_block
     }
 }
 
+/**
+ * @brief 计算每个残差, 对应的Jacobian, 并更新parameter_block_data
+ */
 void MarginalizationInfo::preMarginalize() {
     for (auto it : factors) {
         it->Evaluate();
@@ -142,29 +145,34 @@ void* ThreadsConstructA(void* threadsstruct) {
     return threadsstruct;
 }
 
+/**
+ * @brief 求解Ax=b, 并计算Jacobian和残差
+ *
+ * @return
+ */
 void MarginalizationInfo::marginalize() {
     int pos = 0;
+    // 每个被边缘化的优化变量在矩阵中的位置
     for (auto& it : parameter_block_idx) {
         it.second = pos;
         pos += localSize(parameter_block_size[it.first]);
     }
-
     m = pos;
 
+    // 每个被保留的优化变量在矩阵中的位置
     for (const auto& it : parameter_block_size) {
         if (parameter_block_idx.find(it.first) == parameter_block_idx.end()) {
             parameter_block_idx[it.first] = pos;
             pos += localSize(it.second);
         }
     }
-
     n = pos - m;
 
     // ROS_DEBUG("marginalization, pos: %d, m: %d, n: %d, size: %d", pos, m, n, (int)parameter_block_idx.size());
 
     TicToc t_summing;
-    Eigen::MatrixXd A(pos, pos);
-    Eigen::VectorXd b(pos);
+    Eigen::MatrixXd A(pos, pos);  // 把要被边缘化的优化变量对应的H矩阵放在左上角
+    Eigen::VectorXd b(pos);       // 把要被边缘化的优化变量对应的b放到左边
     A.setZero();
     b.setZero();
     /*
@@ -237,6 +245,7 @@ void MarginalizationInfo::marginalize() {
         saes.eigenvectors().transpose();
     // printf("error1: %f\n", (Amm * Amm_inv - Eigen::MatrixXd::Identity(m, m)).sum());
 
+    // Schur补
     Eigen::VectorXd bmm = b.segment(0, m);
     Eigen::MatrixXd Amr = A.block(0, m, m, n);
     Eigen::MatrixXd Arm = A.block(m, 0, n, m);
@@ -253,6 +262,7 @@ void MarginalizationInfo::marginalize() {
     Eigen::VectorXd S_sqrt = S.cwiseSqrt();
     Eigen::VectorXd S_inv_sqrt = S_inv.cwiseSqrt();
 
+    // 对A进行特征值分解, A = U＊S*V^T = J^T*J
     linearized_jacobians = S_sqrt.asDiagonal() * saes2.eigenvectors().transpose();
     linearized_residuals = S_inv_sqrt.asDiagonal() * saes2.eigenvectors().transpose() * b;
     // std::cout << A << std::endl
@@ -301,9 +311,9 @@ bool MarginalizationFactor::Evaluate(double const* const* parameters, double* re
     // printf("jacobian %x\n", reinterpret_cast<long>(jacobians));
     // printf("residual %x\n", reinterpret_cast<long>(residuals));
     //}
-    int n = marginalization_info->n;
-    int m = marginalization_info->m;
-    Eigen::VectorXd dx(n);
+    int n = marginalization_info->n;  //保留的状态量数目
+    int m = marginalization_info->m;  //被边缘化的状态变量数目
+    Eigen::VectorXd dx(n);            //当前状态量和边缘化时的状态量之间的差值
     for (int i = 0; i < static_cast<int>(marginalization_info->keep_block_size.size()); i++) {
         int size = marginalization_info->keep_block_size[i];
         int idx = marginalization_info->keep_block_idx[i] - m;

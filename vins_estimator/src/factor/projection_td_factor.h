@@ -7,6 +7,11 @@
 #include "../utility/tic_toc.h"
 #include "../utility/utility.h"
 
+/**
+ * @brief 考虑IMU-Camera存在时延的重投影误差
+ *
+ * @return
+ */
 class ProjectionTdFactor : public ceres::SizedCostFunction<2, 7, 7, 7, 1, 1> {
   public:
     ProjectionTdFactor(const Eigen::Vector3d& _pts_i, const Eigen::Vector3d& _pts_j, const Eigen::Vector2d& _velocity_i,
